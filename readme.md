@@ -9,8 +9,7 @@ The Literature Review Manager helps researchers organize and analyze academic pa
 This repository contains multiple implementations of the Literature Review Manager:
 
 1. **Web-based HTML/JavaScript versions**:
-   - `collectreviewsall.html`: Full-featured web version with support for TXT, MD, and DOCX files
-   - `CollectReviewsmd.html`: Simplified version supporting only TXT/MD files
+   - `collectreviewsall.html`: Full-featured web version with support for TXT, MD, DOCX, and PDF files
 
 2. **Python implementations**:
    - `LRSheets.py`: Flask-based web application with Excel export capability
@@ -62,8 +61,6 @@ Simply open any of the HTML files in a web browser:
 ```
 # Open directly from file explorer or:
 open collectreviewsall.html
-# OR
-open CollectReviewsmd.html
 ```
 
 #### Python Flask Web App
@@ -94,7 +91,7 @@ python LRSheets2.py
 
 1. Use the provided template (`lit-review-template.md`) as a starting point
 2. Fill in the YAML frontmatter between the `---` markers
-3. Save your file with a `.md`, `.txt`, or `.docx` extension
+3. Save your file with a `.md`, `.txt`, `.docx`, or `.pdf` extension
 
 Example YAML frontmatter:
 
@@ -142,8 +139,7 @@ The Python implementations offer additional features:
 
 ```
 literature-review-manager/
-├── collectreviewsall.html     # Full-featured web version
-├── CollectReviewsmd.html      # Simplified web version
+├── collectreviews.html     # Full-featured web version
 ├── lit-review-template.md     # Template for creating new reviews
 ├── LRSheets.py                # Flask web application
 ├── LRSheets2.py               # Tkinter desktop application
@@ -222,9 +218,6 @@ Contributions to improve the Literature Review Manager are welcome. Please follo
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
