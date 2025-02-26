@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Literature Review Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.32.4/docxtemplater.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip-utils/0.1.0/jszip-utils.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f7f9fc;
+        }
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .file-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        #fileInput {
+            margin-bottom: 10px;
+        }
+        #fileStatusArea {
+            width: 100%;
+            min-height: 40px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .lit-search-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1em;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .lit-search-input {
+            flex: 1;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .lit-export-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .lit-export-btn:hover {
+            background: #2980b9;
+        }
+        .lit-table-container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        .lit-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .lit-table thead tr {
+            background-color: #f2f6fa;
+            color: #2c3e50;
+            text-align: left;
+        }
+        .lit-table th, .lit-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+        }
+        .lit-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .lit-table tbody tr:hover {
+            background-color: #f2f6fa;
+        }
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #tooltip {
+            position: absolute;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        .file-type-label {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 8px;
+            color: white;
+        }
+        .file-type-md { background-color: #2ecc71; }
+        .file-type-txt { background-color: #3498db; }
+        .file-type-docx { background-color: #9b59b6; }
+        .file-type-pdf { background-color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+    <h2>Literature Review Manager</h2>
+
+    <div class="upload-container">
+        <div class="file-input-wrapper">
+            <input type="file" id="fileInput" multiple accept=".txt,.md,.docx,.pdf" />
+            <div id="fileStatusArea"></div>
+        </div>
+    </div>
+
+    <div class="lit-search-container">
+        <input class="lit-search-input" type="text" placeholder="Search in table..." id="litSearchInput" />
+        <button id="litExportBtn" class="lit-export-btn">Export CSV</button>
+    </div>
+
+    <div id="loadingIndicator" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>Processing files... Please wait.</p>
+    </div>
+
+    <div class="lit-table-container">
+        <table id="litTable" class="lit-table">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Author/Country</th>
+                    <th>Title</th>
+                    <th>Journal</th>
+                    <th>Abstract</th>
+                    <th>Methodology</th>
+                    <th>Strengths/Limitations</th>
+                    <th>Sample Size</th>
+                    <th>Key Findings</th>
+                    <th>Notes</th>
+                    <th>Remarks</th>
+                    <th>Citation</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <script>
+        // Load PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
+
+        // Setup event listeners
+        document.getElementById("fileInput").addEventListener("change", handleFileUpload);
+        document.getElementById("litSearchInput").addEventListener("keyup", filterTable);
+        document.getElementById("litExportBtn").addEventListener("click", exportToCSV);
+
+        // Setup tooltip functionality
+        const tooltip = document.getElementById("tooltip");
+        document.addEventListener("mousemove", (e) => {
+            if (tooltip.style.display === "block") {
+                tooltip.style.left = (e.pageX + 15) + "px";
+                tooltip.style.top = (e.pageY + 15) + "px";
+            }
+        });
+
+        // Global tracking of processed files
+        let processedFiles = 0;
+        let totalFiles = 0;
+        let fileErrors = 0;
+
+        function updateFileStatus() {
+            const statusArea = document.getElementById("fileStatusArea");
+            statusArea.innerHTML = `Processed ${processedFiles} of ${totalFiles} files. ${fileErrors ? `Errors: ${fileErrors}` : ''}`;
+        }
+
+        function showLoading() {
+            document.getElementById("loadingIndicator").style.display = "block";
+        }
+
+        function hideLoading() {
+            document.getElementById("loadingIndicator").style.display = "none";
+        }
+
+        async function handleFileUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            
+            // Reset counters
+            processedFiles = 0;
+            totalFiles = files.length;
+            fileErrors = 0;
+            updateFileStatus();
+            
+            const tableBody = document.querySelector("#litTable tbody");
+            tableBody.innerHTML = ""; 
+            
+            showLoading();
+
+            // Process each file
+            for (const file of files) {
+                try {
+                    if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+                        await processTextFile(file);
+                    } else if (file.name.endsWith('.docx')) {
+                        await processDocxFile(file);
+                    } else if (file.name.endsWith('.pdf')) {
+                        await processPdfFile(file);
+                    }
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    fileErrors++;
+                } finally {
+                    processedFiles++;
+                    updateFileStatus();
+                }
+            }
+            
+            hideLoading();
+        }
+
+        function processTextFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const metadata = extractYAML(content);
+
+                    if (metadata) {
+                        addRowToTable(metadata, file.name, 'txt');
+                        resolve();
+                    } else {
+                        fileErrors++;
+                        reject(new Error("No YAML metadata found"));
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function processDocxFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const arrayBuffer = reader.result;
+                    Mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                        .then(function(result) {
+                            const text = result.value;
+                            const metadata = extractYAML(text);
+                            if (metadata) {
+                                addRowToTable(metadata, file.name, 'docx');
+                                resolve();
+                            } else {
+                                fileErrors++;
+                                reject(new Error("No YAML metadata found"));
+                            }
+                        })
+                        .catch(function(err) {
+                            console.error("Error extracting DOCX:", err);
+                            reject(err);
+                        });
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // New function to process PDF files
+        function processPdfFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    try {
+                        const arrayBuffer = reader.result;
+                        const pdfData = new Uint8Array(arrayBuffer);
+                        
+                        // Load the PDF document
+                        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+                        const pdf = await loadingTask.promise;
+                        
+                        let fullText = '';
+                        
+                        // Extract text from each page
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += pageText + '\n';
+                        }
+                        
+                        // Look for YAML metadata
+                        const metadata = extractYAML(fullText);
+                        
+                        if (metadata) {
+                            addRowToTable(metadata, file.name, 'pdf');
+                            resolve();
+                        } else {
+                            fileErrors++;
+                            reject(new Error("No YAML metadata found in PDF"));
+                        }
+                    } catch (error) {
+                        console.error("Error processing PDF:", error);
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function extractYAML(content) {
+            const yamlRegex = /---([\s\S]*?)---/;
+            const match = content.match(yamlRegex);
+
+            if (!match) return null;
+
+            const yamlContent = match[1].trim();
+            const lines = yamlContent.split("\n");
+            const metadata = {};
+
+            lines.forEach(line => {
+                // Skip empty lines
+                if (!line.trim()) return;
+                
+                // Handle multi-line values that don't have a colon
+                if (line.indexOf(':') === -1) {
+                    const lastKey = Object.keys(metadata).pop();
+                    if (lastKey) {
+                        metadata[lastKey] += ' ' + line.trim();
+                    }
+                    return;
+                }
+                
+                const [key, ...valueParts] = line.split(":");
+                if (key && valueParts.length) {
+                    const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
+                    metadata[normalizedKey] = valueParts.join(":").trim().replace(/^["']|["']$/g, "");
+                }
+            });
+
+            return metadata;
+        }
+
+        function addRowToTable(metadata, filename, fileType) {
+            const tableBody = document.querySelector("#litTable tbody");
+            const row = document.createElement("tr");
+            
+            const fileTypeClasses = {
+                'txt': 'file-type-txt',
+                'md': 'file-type-md',
+                'docx': 'file-type-docx',
+                'pdf': 'file-type-pdf'
+            };
+            
+            const fileExtension = filename.split('.').pop();
+            const fileTypeClass = fileTypeClasses[fileType] || '';
+            
+            // Define cell structure and content
+            const cellData = [
+                { key: "year", content: metadata.year || "" },
+                { key: "author_country", content: metadata.author_country || "" },
+                { 
+                    key: "title", 
+                    content: metadata.title || "",
+                    html: metadata.title ? 
+                        `<span>${metadata.title}</span>
+                        <span class="file-type-label ${fileTypeClass}">${fileExtension}</span>` : ""
+                },
+                { key: "journal", content: metadata.journal || "" },
+                { key: "abstract", content: metadata.abstract || "" },
+                { key: "methodology", content: metadata.methodology || "" },
+                { key: "strengths_limitations", content: metadata.strengths_limitations || "" },
+                { key: "sample_size", content: metadata.sample_size || "" },
+                { key: "key_findings", content: metadata.key_findings || "" },
+                { key: "notes", content: metadata.notes || "" },
+                { key: "remarks", content: metadata.remarks || "" },
+                { key: "citation", content: metadata.citation || "" }
+            ];
+            
+            // Create each cell
+            cellData.forEach(cell => {
+                const td = document.createElement("td");
+                
+                if (cell.html) {
+                    td.innerHTML = cell.html;
+                } else {
+                    td.textContent = cell.content;
+                }
+                
+                // Add tooltip behavior for cells with long content
+                if (cell.content && cell.content.length > 100) {
+                    td.classList.add("has-tooltip");
+                    td.addEventListener("mouseenter", function() {
+                        tooltip.textContent = cell.content;
+                        tooltip.style.display = "block";
+                    });
+                    td.addEventListener("mouseleave", function() {
+                        tooltip.style.display = "none";
+                    });
+                }
+                
+                row.appendChild(td);
+            });
+            
+            tableBody.appendChild(row);
+        }
+
+        function filterTable() {
+            const filter = document.getElementById("litSearchInput").value.toLowerCase();
+            const rows = document.querySelectorAll("#litTable tbody tr");
+
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                row.style.display = rowText.includes(filter) ? "" : "none";
+            });
+        }
+
+        function exportToCSV() {
+            const rows = Array.from(document.querySelectorAll("#litTable tbody tr")).filter(row => 
+                row.style.display !== "none"
+            ).map(row => 
+                Array.from(row.children).map(cell => {
+                    // Get text content only, removing any HTML
+                    const text = cell.textContent.replace(/\r?\n|\r/g, " ").trim();
+                    // Escape double quotes and wrap in quotes
+                    return `"${text.replace(/"/g, '""')}"`;
+                }).join(",")
+            );
+
+            if (rows.length === 0) {
+                alert("No data to export");
+                return;
+            }
+
+            const headers = Array.from(document.querySelectorAll("#litTable th")).map(
+                th => `"${th.textContent}"`
+            ).join(",");
+            
+            const csvContent = headers + "\n" + rows.join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.setAttribute("href", url);
+            link.setAttribute("download", "literature_reviews.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+
+</body>
+</html>
